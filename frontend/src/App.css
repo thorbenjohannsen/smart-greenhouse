@@ -797,3 +797,242 @@ h1 {
     padding: 20px 14px;
   }
 }
+
+/* =========================================
+   PLACEHOLDER / COMING SOON
+========================================= */
+
+.coming-soon {
+  display: inline-flex;
+  align-items: center;
+
+  width: fit-content;
+
+  padding: 3px 7px;
+
+  border-radius: 999px;
+
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+
+  color: #718179;
+
+  font-size: 8px;
+  font-weight: 600;
+
+  white-space: nowrap;
+}
+
+.nav-content {
+  flex: 1;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 10px;
+}
+
+.nav-disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.nav-disabled:hover {
+  color: #85968b;
+  background: transparent;
+}
+
+.heading-with-badge {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.unavailable-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  gap: 2px;
+
+  cursor: default;
+  opacity: 0.65;
+}
+
+.unavailable-button span {
+  font-size: 7px;
+  color: #6c8073;
+}
+
+.mock-label {
+  color: #76887d !important;
+}
+
+.error-banner {
+  margin-bottom: 20px;
+  padding: 14px 18px;
+
+  border-radius: 12px;
+
+  background: rgba(255, 80, 80, 0.08);
+
+  border: 1px solid rgba(255, 80, 80, 0.15);
+
+  color: #ff9696;
+
+  font-size: 13px;
+}
+
+
+/* =========================================
+   KAMERA
+========================================= */
+
+.camera-preview {
+  width: 100%;
+  height: 100%;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 10px;
+}
+
+.camera-image {
+  width: 100%;
+  height: 165px;
+
+  display: block;
+
+  object-fit: cover;
+
+  border-radius: 10px;
+
+  background: #050b07;
+}
+
+.camera-actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+
+  gap: 8px;
+}
+
+.camera-actions .secondary-button {
+  width: 100%;
+}
+
+.camera-close-button {
+  color: #9baca1;
+}
+
+.camera-error {
+  margin-top: 10px;
+
+  padding: 8px 10px;
+
+  border-radius: 8px;
+
+  background: rgba(255, 80, 80, 0.07);
+
+  color: #e78f8f;
+
+  font-size: 9px;
+}
+
+.live-badge.camera-active {
+  color: #6ce79f;
+
+  text-shadow:
+          0 0 10px rgba(108, 231, 159, 0.5);
+}
+
+
+/* =========================================
+   SCHNELLSTEUERUNG
+========================================= */
+
+.control-card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 12px;
+
+  margin-bottom: 10px;
+}
+
+.control-card-heading h2 {
+  margin: 0;
+}
+
+.unavailable-control {
+  opacity: 0.55;
+}
+
+.unavailable-control .toggle {
+  cursor: not-allowed;
+}
+
+.toggle:disabled {
+  cursor: not-allowed;
+}
+
+
+/* =========================================
+   CHART PLACEHOLDER
+========================================= */
+
+.chart {
+  position: relative;
+}
+
+.chart-demo {
+  opacity: 0.22;
+}
+
+.chart-overlay {
+  position: absolute;
+
+  inset: 0 0 30px 0;
+
+  z-index: 3;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  pointer-events: none;
+
+  text-align: center;
+}
+
+.chart-overlay > span {
+  font-size: 24px;
+
+  margin-bottom: 8px;
+}
+
+.chart-overlay strong {
+  display: block;
+
+  font-size: 12px;
+
+  color: #afbeb4;
+}
+
+.chart-overlay small {
+  display: block;
+
+  max-width: 300px;
+
+  margin-top: 6px;
+
+  color: #677a6e;
+
+  font-size: 9px;
+
+  line-height: 1.5;
+}

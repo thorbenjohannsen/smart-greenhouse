@@ -34,6 +34,14 @@ function getMoistureStatus(
   return "Optimal";
 }
 
+type ComingSoonProps = {
+  text?: string;
+};
+
+function ComingSoon({ text = "Bald verfügbar" }: ComingSoonProps) {
+  return <span className="coming-soon">{text}</span>;
+}
+
 type PlantCardProps = {
   plant: Plant;
   onWater: (plantId: number, amount: number) => Promise<void>;
@@ -142,21 +150,21 @@ function PlantCard({
               disabled={watering}
               onClick={() => handleWater(25)}
           >
-            💧 25 ml
+            {watering ? "..." : "💧 25 ml"}
           </button>
 
           <button
               disabled={watering}
               onClick={() => handleWater(50)}
           >
-            💧 50 ml
+            {watering ? "..." : "💧 50 ml"}
           </button>
 
           <button
               disabled={watering}
               onClick={() => handleWater(100)}
           >
-            💧 100 ml
+            {watering ? "..." : "💧 100 ml"}
           </button>
         </div>
       </div>
@@ -173,13 +181,20 @@ function App() {
 
   const [error, setError] = useState<string | null>(null);
 
-  const [light, setLight] = useState(false);
-  const [fan, setFan] = useState(false);
-  const [wateringAutomation, setWateringAutomation] =
-      useState(true);
+  /*
+   * Kamera
+   */
+  const [cameraImage, setCameraImage] =
+      useState<string | null>(null);
+
+  const [cameraLoading, setCameraLoading] =
+      useState(false);
+
+  const [cameraError, setCameraError] =
+      useState<string | null>(null);
 
   /*
-   * Daten vom Backend laden
+   * Backend-Daten laden
    */
   async function loadData() {
     try {
@@ -211,9 +226,6 @@ function App() {
 
       setPlants(plantsData);
       setSystemStatus(statusData);
-
-      setLight(statusData.light);
-      setFan(statusData.fan);
     } catch (err) {
       console.error(err);
 
@@ -231,6 +243,10 @@ function App() {
 
   /*
    * Pflanze gießen
+   *
+   * Aktuell wird die Bewässerung im Backend
+   * noch simuliert. Später steuert dieser Endpoint
+   * den GPIO/MOSFET des Raspberry Pi.
    */
   async function waterPlant(
       plantId: number,
@@ -262,10 +278,6 @@ function App() {
 
       console.log("Bewässerung:", data);
 
-      /*
-       * Backend-Daten neu laden,
-       * damit "Zuletzt gegossen" aktualisiert wird.
-       */
       await loadData();
     } catch (err) {
       console.error(err);
@@ -324,6 +336,49 @@ function App() {
     }
   }
 
+  /*
+   * Neues Kamerabild vom Raspberry Pi aufnehmen
+   */
+  async function takeCameraSnapshot() {
+    try {
+      setCameraLoading(true);
+      setCameraError(null);
+
+      const response = await fetch(
+          `${API_URL}/api/camera/snapshot`,
+          {
+            method: "POST",
+          }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+            "Kameraaufnahme fehlgeschlagen"
+        );
+      }
+
+      /*
+       * Timestamp verhindert Browser-Caching.
+       */
+      setCameraImage(
+          `${API_URL}/api/camera/snapshot?t=${Date.now()}`
+      );
+    } catch (err) {
+      console.error(err);
+
+      setCameraError(
+          "Die Kamera konnte kein Bild aufnehmen."
+      );
+    } finally {
+      setCameraLoading(false);
+    }
+  }
+
+  function closeCamera() {
+    setCameraImage(null);
+    setCameraError(null);
+  }
+
   return (
       <div className="app">
         <aside className="sidebar">
@@ -343,31 +398,66 @@ function App() {
                 Übersicht
               </button>
 
-              <button className="nav-item">
+              <button
+                  className="nav-item nav-disabled"
+                  disabled
+              >
                 <span>🌱</span>
-                Pflanzen
+
+                <div className="nav-content">
+                  Pflanzen
+                  <ComingSoon />
+                </div>
               </button>
 
-              <button className="nav-item">
+              <button
+                  className="nav-item nav-disabled"
+                  disabled
+              >
                 <span>💧</span>
-                Bewässerung
+
+                <div className="nav-content">
+                  Bewässerung
+                  <ComingSoon />
+                </div>
               </button>
 
-              <button className="nav-item">
+              <button
+                  className="nav-item nav-disabled"
+                  disabled
+              >
                 <span>📷</span>
-                Kamera
+
+                <div className="nav-content">
+                  Kamera
+                  <ComingSoon text="Detailansicht bald" />
+                </div>
               </button>
 
-              <button className="nav-item">
+              <button
+                  className="nav-item nav-disabled"
+                  disabled
+              >
                 <span>📊</span>
-                Statistiken
+
+                <div className="nav-content">
+                  Statistiken
+                  <ComingSoon />
+                </div>
               </button>
             </nav>
           </div>
 
-          <button className="nav-item">
+          <button
+              className="nav-item nav-disabled"
+              disabled
+          >
             <span>⚙</span>
-            Einstellungen
+
+            <div className="nav-content">
+              Einstellungen
+              <ComingSoon />
+            </div>
           </button>
         </aside>
 
@@ -403,19 +493,7 @@ function App() {
           </header>
 
           {error && (
-              <div
-                  style={{
-                    marginBottom: "20px",
-                    padding: "14px 18px",
-                    borderRadius: "12px",
-                    background:
-                        "rgba(255, 80, 80, 0.08)",
-                    border:
-                        "1px solid rgba(255, 80, 80, 0.15)",
-                    color: "#ff9696",
-                    fontSize: "13px",
-                  }}
-              >
+              <div className="error-banner">
                 ⚠️ {error}
               </div>
           )}
@@ -433,7 +511,9 @@ function App() {
                       : "--"}
                 </strong>
 
-                <small>Optimal</small>
+                <small className="mock-label">
+                  Sensor folgt
+                </small>
               </div>
             </div>
 
@@ -449,7 +529,9 @@ function App() {
                       : "--"}
                 </strong>
 
-                <small>Optimal</small>
+                <small className="mock-label">
+                  Sensor folgt
+                </small>
               </div>
             </div>
 
@@ -465,7 +547,9 @@ function App() {
                       : "--"}
                 </strong>
 
-                <small>Tankstatus</small>
+                <small className="mock-label">
+                  Sensor folgt
+                </small>
               </div>
             </div>
 
@@ -476,13 +560,11 @@ function App() {
                 <span>Beleuchtung</span>
 
                 <strong>
-                  {light ? "AN" : "AUS"}
+                  {systemStatus?.light ? "AN" : "AUS"}
                 </strong>
 
-                <small>
-                  {light
-                      ? "bis 21:00 Uhr"
-                      : "ausgeschaltet"}
+                <small className="mock-label">
+                  Steuerung bald verfügbar
                 </small>
               </div>
             </div>
@@ -499,8 +581,12 @@ function App() {
                   </p>
                 </div>
 
-                <button className="secondary-button">
+                <button
+                    className="secondary-button unavailable-button"
+                    disabled
+                >
                   + Pflanze
+                  <span>Bald verfügbar</span>
                 </button>
               </div>
 
@@ -525,14 +611,18 @@ function App() {
               <div className="chart-card">
                 <div className="section-heading">
                   <div>
-                    <h2>Feuchtigkeit</h2>
+                    <div className="heading-with-badge">
+                      <h2>Feuchtigkeit</h2>
+
+                      <ComingSoon text="Demo-Daten" />
+                    </div>
 
                     <p>
                       Verlauf der letzten 24 Stunden
                     </p>
                   </div>
 
-                  <select>
+                  <select disabled>
                     {plants.map((plant) => (
                         <option
                             key={plant.id}
@@ -545,7 +635,19 @@ function App() {
                 </div>
 
                 <div className="chart">
-                  <div className="chart-line">
+                  <div className="chart-overlay">
+                    <span>📊</span>
+                    <strong>
+                      Messhistorie bald verfügbar
+                    </strong>
+                    <small>
+                      Sobald die Sensordaten gespeichert
+                      werden, erscheint hier der echte
+                      Feuchtigkeitsverlauf.
+                    </small>
+                  </div>
+
+                  <div className="chart-line chart-demo">
                     <svg
                         viewBox="0 0 800 230"
                         preserveAspectRatio="none"
@@ -622,6 +724,7 @@ function App() {
             </div>
 
             <aside className="right-column">
+              {/* KAMERA */}
               <div className="camera-card">
                 <div className="card-heading">
                   <div>
@@ -629,41 +732,90 @@ function App() {
                     <p>Gewächshaus</p>
                   </div>
 
-                  <span className="live-badge">
-                  ● BEREIT
+                  <span
+                      className={`live-badge ${
+                          cameraImage
+                              ? "camera-active"
+                              : ""
+                      }`}
+                  >
+                  ● {cameraImage ? "AKTIV" : "BEREIT"}
                 </span>
                 </div>
 
                 <div className="camera-placeholder">
-                  <div className="camera-content">
-                    <span>📷</span>
+                  {cameraImage ? (
+                      <div className="camera-preview">
+                        <img
+                            src={cameraImage}
+                            alt="Aktuelles Bild des Gewächshauses"
+                            className="camera-image"
+                        />
 
-                    <strong>
-                      Kamera bereit
-                    </strong>
+                        <div className="camera-actions">
+                          <button
+                              className="secondary-button"
+                              onClick={takeCameraSnapshot}
+                              disabled={cameraLoading}
+                          >
+                            {cameraLoading
+                                ? "Aktualisiere..."
+                                : "↻ Neues Bild"}
+                          </button>
 
-                    <small>
-                      Die Raspberry-Pi-Kamera kann
-                      später hier auf Knopfdruck
-                      gestartet werden.
-                    </small>
+                          <button
+                              className="secondary-button camera-close-button"
+                              onClick={closeCamera}
+                          >
+                            Schließen
+                          </button>
+                        </div>
+                      </div>
+                  ) : (
+                      <div className="camera-content">
+                        <span>📷</span>
 
-                    <button
-                        className="secondary-button"
-                        style={{
-                          marginTop: "14px",
-                        }}
-                    >
-                      Kamera öffnen
-                    </button>
-                  </div>
+                        <strong>
+                          Kamera bereit
+                        </strong>
+
+                        <small>
+                          Nimmt auf Knopfdruck ein aktuelles
+                          Foto deines Gewächshauses auf.
+                        </small>
+
+                        {cameraError && (
+                            <div className="camera-error">
+                              ⚠️ {cameraError}
+                            </div>
+                        )}
+
+                        <button
+                            className="secondary-button"
+                            style={{
+                              marginTop: "14px",
+                            }}
+                            onClick={takeCameraSnapshot}
+                            disabled={cameraLoading}
+                        >
+                          {cameraLoading
+                              ? "Kamera startet..."
+                              : "Kamera öffnen"}
+                        </button>
+                      </div>
+                  )}
                 </div>
               </div>
 
+              {/* SCHNELLSTEUERUNG */}
               <div className="control-card">
-                <h2>Schnellsteuerung</h2>
+                <div className="control-card-heading">
+                  <h2>Schnellsteuerung</h2>
 
-                <div className="control-row">
+                  <ComingSoon />
+                </div>
+
+                <div className="control-row unavailable-control">
                   <div>
                   <span className="control-icon">
                     💡
@@ -675,24 +827,21 @@ function App() {
                       </strong>
 
                       <small>
-                        06:30 – 21:00
+                        Hardware noch nicht angeschlossen
                       </small>
                     </div>
                   </div>
 
                   <button
-                      className={`toggle ${
-                          light ? "active" : ""
-                      }`}
-                      onClick={() =>
-                          setLight((current) => !current)
-                      }
+                      className="toggle"
+                      disabled
+                      title="Bald verfügbar"
                   >
                     <span />
                   </button>
                 </div>
 
-                <div className="control-row">
+                <div className="control-row unavailable-control">
                   <div>
                   <span className="control-icon">
                     🌬️
@@ -700,23 +849,23 @@ function App() {
 
                     <div>
                       <strong>Lüfter</strong>
-                      <small>Automatisch</small>
+
+                      <small>
+                        Hardware noch nicht angeschlossen
+                      </small>
                     </div>
                   </div>
 
                   <button
-                      className={`toggle ${
-                          fan ? "active" : ""
-                      }`}
-                      onClick={() =>
-                          setFan((current) => !current)
-                      }
+                      className="toggle"
+                      disabled
+                      title="Bald verfügbar"
                   >
                     <span />
                   </button>
                 </div>
 
-                <div className="control-row">
+                <div className="control-row unavailable-control">
                   <div>
                   <span className="control-icon">
                     💧
@@ -724,36 +873,32 @@ function App() {
 
                     <div>
                       <strong>
-                        Bewässerung
+                        Globale Bewässerung
                       </strong>
 
                       <small>
-                        {wateringAutomation
-                            ? "Automatik aktiv"
-                            : "Automatik aus"}
+                        Bald verfügbar
                       </small>
                     </div>
                   </div>
 
                   <button
-                      className={`toggle ${
-                          wateringAutomation
-                              ? "active"
-                              : ""
-                      }`}
-                      onClick={() =>
-                          setWateringAutomation(
-                              (current) => !current
-                          )
-                      }
+                      className="toggle"
+                      disabled
+                      title="Bald verfügbar"
                   >
                     <span />
                   </button>
                 </div>
               </div>
 
+              {/* AKTIVITÄTEN */}
               <div className="activity-card">
-                <h2>Letzte Aktivitäten</h2>
+                <div className="control-card-heading">
+                  <h2>Letzte Aktivitäten</h2>
+
+                  <ComingSoon text="Historie folgt" />
+                </div>
 
                 <div className="activity">
                   <span>💧</span>
