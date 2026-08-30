@@ -378,7 +378,7 @@ function App() {
                 SMART GREENHOUSE
               </p>
 
-              <h1>Guten Tag 👋</h1>
+              <h1>Guten Tag, Thorben 👋</h1>
 
               <p className="subtitle">
                 Deinem Gewächshaus geht es heute gut.
