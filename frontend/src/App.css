@@ -1036,3 +1036,7 @@ h1 {
 
   line-height: 1.5;
 }
+
+.nav-item {
+  text-decoration: none;
+}
