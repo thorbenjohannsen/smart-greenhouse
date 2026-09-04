@@ -14,6 +14,8 @@ import Watering from "./pages/Watering";
 import Camera from "./pages/Camera";
 import Statistics from "./pages/Statistics";
 import Settings from "./pages/Settings";
+import AIAnalysis from "./pages/AIAnalysis.tsx";
+import Beds from "./pages/Beds.tsx";
 
 function App() {
   return (
@@ -29,6 +31,11 @@ function App() {
                     <Dashboard />
                   }
               />
+
+                <Route
+                    path="/beds"
+                    element={<Beds />}
+                />
 
               <Route
                   path="/plants"
@@ -64,6 +71,10 @@ function App() {
                     <Settings />
                   }
               />
+                <Route
+                    path="/ai"
+                    element={<AIAnalysis />}
+                />
             </Routes>
           </main>
         </div>

@@ -1,188 +1,463 @@
 import express from "express";
 import cors from "cors";
+
 import { execFile } from "node:child_process";
+
 import path from "node:path";
 import fs from "node:fs";
-import { fileURLToPath } from "node:url";
+
+import {
+    fileURLToPath
+} from "node:url";
+
 
 const app = express();
 
+const PORT = 3000;
+
+const IS_LINUX =
+    process.platform === "linux";
+
+
+// ---------------------------------------------------------
+// MIDDLEWARE
+// ---------------------------------------------------------
+
 app.use(cors());
-app.use(express.json());
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const CAMERA_DIRECTORY = path.join(
-    __dirname,
-    "../camera"
+app.use(
+    express.json()
 );
 
-const CAMERA_IMAGE_PATH = path.join(
-    CAMERA_DIRECTORY,
-    "snapshot.jpg"
-);
 
-/*
- * Kameraordner automatisch erstellen
- */
-if (!fs.existsSync(CAMERA_DIRECTORY)) {
-    fs.mkdirSync(CAMERA_DIRECTORY, {
-        recursive: true,
-    });
-}
+// ---------------------------------------------------------
+// TYPES
+// ---------------------------------------------------------
 
-type Plant = {
+type PlantType =
+    | "tomato"
+    | "pepper";
+
+
+type Bed = {
     id: number;
+
     name: string;
-    type: string;
+
+    plantName: string;
+    plantType: PlantType;
+
     moisture: number;
+
     targetMin: number;
     targetMax: number;
+
     autoWatering: boolean;
+
     lastWatered: string | null;
 };
 
-const plants: Plant[] = [
+
+// ---------------------------------------------------------
+// MOCK DATA
+// ---------------------------------------------------------
+
+const beds: Bed[] = [
     {
         id: 1,
-        name: "Basilikum",
-        type: "Kräuter",
-        moisture: 54,
-        targetMin: 45,
-        targetMax: 65,
+
+        name: "Beet 1",
+
+        plantName: "Tomate",
+        plantType: "tomato",
+
+        moisture: 42,
+
+        targetMin: 35,
+        targetMax: 60,
+
         autoWatering: true,
+
         lastWatered: null,
     },
 
     {
         id: 2,
-        name: "Chili",
-        type: "Gemüse",
-        moisture: 38,
-        targetMin: 35,
-        targetMax: 55,
-        autoWatering: true,
+
+        name: "Beet 2",
+
+        plantName: "Paprika",
+        plantType: "pepper",
+
+        moisture: 55,
+
+        targetMin: 40,
+        targetMax: 65,
+
+        autoWatering: false,
+
         lastWatered: null,
     },
 ];
 
-/*
- * Systemstatus
- *
- * Werte sind aktuell teilweise Mock-Daten.
- */
-app.get("/api/status", (req, res) => {
-    res.json({
-        status: "online",
 
-        temperature: 24.3,
-        humidity: 64,
-        waterTank: 74,
+// ---------------------------------------------------------
+// SYSTEM STATUS
+// ---------------------------------------------------------
 
-        light: false,
-        fan: false,
-    });
-});
+app.get(
+    "/api/status",
+    (_req, res) => {
 
-/*
- * Pflanzen abrufen
- */
-app.get("/api/plants", (req, res) => {
-    res.json(plants);
-});
+        res.json({
+            status: "online",
 
-/*
- * Pflanze gießen
- *
- * Noch Simulation.
- * Später:
- *
- * Node
- * → GPIO
- * → MOSFET
- * → Pumpe
- */
-app.post("/api/plants/:id/water", (req, res) => {
-    const id = Number(req.params.id);
+            temperature: 24.3,
+            humidity: 64,
 
-    const { amount } = req.body;
+            waterTank: 74,
 
-    const plant = plants.find(
-        (plant) => plant.id === id
-    );
+            light: false,
+            fan: false,
 
-    if (!plant) {
-        return res.status(404).json({
-            error: "Pflanze nicht gefunden",
-        });
-    }
-
-    if (
-        typeof amount !== "number" ||
-        amount <= 0
-    ) {
-        return res.status(400).json({
-            error: "Ungültige Wassermenge",
-        });
-    }
-
-    plant.lastWatered =
-        new Date().toLocaleString("de-DE");
-
-    console.log(
-        `💧 ${plant.name} wird simuliert mit ${amount} ml gegossen`
-    );
-
-    return res.json({
-        success: true,
-
-        plantId: plant.id,
-        plantName: plant.name,
-
-        amount,
-
-        lastWatered: plant.lastWatered,
-    });
-});
-
-/*
- * Pflanzenautomatik
- */
-app.patch(
-    "/api/plants/:id/automation",
-    (req, res) => {
-        const id = Number(req.params.id);
-
-        const { enabled } = req.body;
-
-        const plant = plants.find(
-            (plant) => plant.id === id
-        );
-
-        if (!plant) {
-            return res.status(404).json({
-                error: "Pflanze nicht gefunden",
-            });
-        }
-
-        plant.autoWatering = Boolean(enabled);
-
-        return res.json({
-            success: true,
-
-            autoWatering:
-            plant.autoWatering,
+            cameraAvailable: IS_LINUX,
         });
     }
 );
 
-/*
- * Neues Kamerabild aufnehmen
- */
+
+// ---------------------------------------------------------
+// GET ALL BEDS
+// ---------------------------------------------------------
+
+app.get(
+    "/api/beds",
+    (_req, res) => {
+
+        res.json(
+            beds
+        );
+    }
+);
+
+
+// ---------------------------------------------------------
+// GET SINGLE BED
+// ---------------------------------------------------------
+
+app.get(
+    "/api/beds/:id",
+    (req, res) => {
+
+        const id =
+            Number(req.params.id);
+
+        const bed =
+            beds.find(
+                (item) =>
+                    item.id === id
+            );
+
+        if (!bed) {
+            return res
+                .status(404)
+                .json({
+                    error:
+                        "Beet nicht gefunden.",
+                });
+        }
+
+        return res.json(
+            bed
+        );
+    }
+);
+
+
+// ---------------------------------------------------------
+// UPDATE BED
+// ---------------------------------------------------------
+
+app.patch(
+    "/api/beds/:id",
+    (req, res) => {
+
+        const id =
+            Number(req.params.id);
+
+        const bed =
+            beds.find(
+                (item) =>
+                    item.id === id
+            );
+
+        if (!bed) {
+            return res
+                .status(404)
+                .json({
+                    error:
+                        "Beet nicht gefunden.",
+                });
+        }
+
+        const {
+            name,
+            plantName,
+            plantType,
+            targetMin,
+            targetMax,
+            autoWatering,
+        } = req.body;
+
+
+        if (
+            typeof name === "string"
+        ) {
+            bed.name = name;
+        }
+
+
+        if (
+            typeof plantName === "string"
+        ) {
+            bed.plantName =
+                plantName;
+        }
+
+
+        if (
+            plantType === "tomato" ||
+            plantType === "pepper"
+        ) {
+            bed.plantType =
+                plantType;
+        }
+
+
+        if (
+            typeof targetMin ===
+            "number"
+        ) {
+            bed.targetMin =
+                targetMin;
+        }
+
+
+        if (
+            typeof targetMax ===
+            "number"
+        ) {
+            bed.targetMax =
+                targetMax;
+        }
+
+
+        if (
+            typeof autoWatering ===
+            "boolean"
+        ) {
+            bed.autoWatering =
+                autoWatering;
+        }
+
+
+        return res.json(
+            bed
+        );
+    }
+);
+
+
+// ---------------------------------------------------------
+// WATER BED
+// ---------------------------------------------------------
+
+app.post(
+    "/api/beds/:id/water",
+    (req, res) => {
+
+        const id =
+            Number(req.params.id);
+
+        const bed =
+            beds.find(
+                (item) =>
+                    item.id === id
+            );
+
+        if (!bed) {
+            return res
+                .status(404)
+                .json({
+                    error:
+                        "Beet nicht gefunden.",
+                });
+        }
+
+
+        const amount =
+            Number(
+                req.body.amount
+            );
+
+
+        if (
+            !amount ||
+            amount <= 0 ||
+            amount > 1000
+        ) {
+            return res
+                .status(400)
+                .json({
+                    error:
+                        "Ungültige Wassermenge.",
+                });
+        }
+
+
+        /*
+         * NOCH MOCK
+         *
+         * Hier kommt später die echte Pumpensteuerung hin.
+         *
+         * Beispiel:
+         *
+         * await pumpWater(
+         *     bed.id,
+         *     amount
+         * );
+         */
+
+
+        bed.lastWatered =
+            new Date()
+                .toISOString();
+
+
+        console.log(
+            `💧 ${bed.name} bewässert: ${amount} ml`
+        );
+
+
+        return res.json({
+            success: true,
+
+            bed,
+
+            amount,
+        });
+    }
+);
+
+
+// ---------------------------------------------------------
+// CAMERA PATHS
+// ---------------------------------------------------------
+
+const __filename =
+    fileURLToPath(
+        import.meta.url
+    );
+
+
+const __dirname =
+    path.dirname(
+        __filename
+    );
+
+
+const CAMERA_DIRECTORY =
+    path.join(
+        __dirname,
+        "../camera"
+    );
+
+
+const CAMERA_IMAGE_PATH =
+    path.join(
+        CAMERA_DIRECTORY,
+        "snapshot.jpg"
+    );
+
+
+if (
+    !fs.existsSync(
+        CAMERA_DIRECTORY
+    )
+) {
+    fs.mkdirSync(
+        CAMERA_DIRECTORY,
+        {
+            recursive: true,
+        }
+    );
+}
+
+
+// ---------------------------------------------------------
+// CAMERA STATUS
+// ---------------------------------------------------------
+
+app.get(
+    "/api/camera/status",
+    (_req, res) => {
+
+        return res.json({
+            available:
+            IS_LINUX,
+
+            platform:
+            process.platform,
+
+            device:
+                IS_LINUX
+                    ? "/dev/video0"
+                    : null,
+        });
+    }
+);
+
+
+// ---------------------------------------------------------
+// TAKE CAMERA SNAPSHOT
+// ---------------------------------------------------------
+
 app.post(
     "/api/camera/snapshot",
-    (req, res) => {
+    (_req, res) => {
+
+        /*
+         * Die echte Kamera hängt am Raspberry Pi.
+         *
+         * Unter Windows existieren weder:
+         *
+         * /dev/video0
+         *
+         * noch das Linux-v4l2-Interface.
+         *
+         * Deshalb wird der Snapshot lokal deaktiviert.
+         */
+
+        if (!IS_LINUX) {
+
+            console.log(
+                "📷 Kamera-Snapshot übersprungen: Backend läuft nicht auf Linux."
+            );
+
+            return res
+                .status(503)
+                .json({
+                    success: false,
+
+                    error:
+                        "Kamera ist nur auf dem Raspberry Pi verfügbar.",
+
+                    platform:
+                    process.platform,
+                });
+        }
+
+
         const args = [
             "-y",
 
@@ -207,60 +482,82 @@ app.post(
             CAMERA_IMAGE_PATH,
         ];
 
+
         execFile(
             "ffmpeg",
             args,
             {
                 timeout: 10000,
             },
+
             (error) => {
+
                 if (error) {
+
                     console.error(
-                        "📷 Kamera Fehler:",
+                        "Camera error:",
                         error
                     );
 
-                    return res.status(500).json({
-                        success: false,
+                    return res
+                        .status(500)
+                        .json({
+                            success:
+                                false,
 
-                        error:
-                            "Kameraaufnahme fehlgeschlagen",
-                    });
+                            error:
+                                "Kameraaufnahme fehlgeschlagen.",
+                        });
                 }
 
+
                 console.log(
-                    "📷 Neues Kamerabild aufgenommen"
+                    "📷 Kamera-Snapshot erstellt."
                 );
+
 
                 return res.json({
                     success: true,
 
-                    timestamp: Date.now(),
+                    timestamp:
+                        Date.now(),
+
+                    image:
+                        "/api/camera/snapshot",
                 });
             }
         );
     }
 );
 
-/*
- * Aktuelles Kamerabild zurückgeben
- */
+
+// ---------------------------------------------------------
+// GET CAMERA SNAPSHOT
+// ---------------------------------------------------------
+
 app.get(
     "/api/camera/snapshot",
-    (req, res) => {
+    (_req, res) => {
+
         if (
-            !fs.existsSync(CAMERA_IMAGE_PATH)
+            !fs.existsSync(
+                CAMERA_IMAGE_PATH
+            )
         ) {
-            return res.status(404).json({
-                error:
-                    "Noch kein Kamerabild vorhanden",
-            });
+            return res
+                .status(404)
+                .json({
+                    error:
+                        "Noch kein Kamerabild vorhanden.",
+                });
         }
+
 
         res.setHeader(
             "Cache-Control",
             "no-store, no-cache, must-revalidate"
         );
+
 
         return res.sendFile(
             CAMERA_IMAGE_PATH
@@ -268,8 +565,30 @@ app.get(
     }
 );
 
-app.listen(3000, "0.0.0.0", () => {
-    console.log(
-        "🌿 Greenhouse Backend läuft auf http://localhost:3000"
-    );
-});
+
+// ---------------------------------------------------------
+// SERVER
+// ---------------------------------------------------------
+
+app.listen(
+    PORT,
+    () => {
+
+        console.log(
+            `🌿 Greenhouse Backend läuft auf Port ${PORT}`
+        );
+
+
+        console.log(
+            `💻 Plattform: ${process.platform}`
+        );
+
+
+        console.log(
+            IS_LINUX
+                ? "📷 Kamera-Modus: Raspberry Pi / Linux"
+                : "📷 Kamera-Modus: lokal deaktiviert"
+        );
+
+    }
+);

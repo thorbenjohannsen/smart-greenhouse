@@ -3,32 +3,30 @@ import {
     useState,
 } from "react";
 
-import PlantCard from "../components/PlantCard";
-import ComingSoon from "../components/ComingSoon";
+import BedCard from "../components/BedCard";
 
 import {
-    getPlants,
+    getBeds,
     getSystemStatus,
-    setPlantAutomation,
-    waterPlant,
+    setBedAutomation,
+    waterBed,
 } from "../services/api";
 
 import type {
-    Plant,
+    Bed,
     SystemStatus,
 } from "../types/greenhouse";
 
 function Dashboard() {
-    const [plants, setPlants] =
-        useState<Plant[]>([]);
+    const [beds, setBeds] =
+        useState<Bed[]>([]);
 
     const [
         systemStatus,
         setSystemStatus,
-    ] =
-        useState<SystemStatus | null>(
-            null
-        );
+    ] = useState<SystemStatus | null>(
+        null
+    );
 
     const [loading, setLoading] =
         useState(true);
@@ -36,15 +34,20 @@ function Dashboard() {
     async function loadData() {
         try {
             const [
-                plantsData,
+                bedsData,
                 statusData,
             ] = await Promise.all([
-                getPlants(),
+                getBeds(),
                 getSystemStatus(),
             ]);
 
-            setPlants(plantsData);
+            setBeds(bedsData);
             setSystemStatus(statusData);
+        } catch (error) {
+            console.error(
+                "Dashboard konnte nicht geladen werden:",
+                error
+            );
         } finally {
             setLoading(false);
         }
@@ -55,11 +58,11 @@ function Dashboard() {
     }, []);
 
     async function handleWater(
-        plantId: number,
+        bedId: number,
         amount: number
     ) {
-        await waterPlant(
-            plantId,
+        await waterBed(
+            bedId,
             amount
         );
 
@@ -67,24 +70,23 @@ function Dashboard() {
     }
 
     async function handleAutomation(
-        plantId: number,
+        bedId: number,
         enabled: boolean
     ) {
-        await setPlantAutomation(
-            plantId,
-            enabled
-        );
+        const updatedBed =
+            await setBedAutomation(
+                bedId,
+                enabled
+            );
 
-        setPlants(
-            plants.map((plant) =>
-                plant.id === plantId
-                    ? {
-                        ...plant,
-                        autoWatering:
-                        enabled,
-                    }
-                    : plant
-            )
+        setBeds(
+            (currentBeds) =>
+                currentBeds.map(
+                    (bed) =>
+                        bed.id === bedId
+                            ? updatedBed
+                            : bed
+                )
         );
     }
 
@@ -97,19 +99,19 @@ function Dashboard() {
                     </p>
 
                     <h1>
-                        Guten Tag, Thorben 👋
+                        Übersicht
                     </h1>
 
                     <p className="subtitle">
-                        Deinem Gewächshaus
-                        geht es heute gut.
+                        Status deiner Beete und
+                        des Gewächshauses.
                     </p>
                 </div>
 
                 <div className="connection">
-          <span
-              className="connection-dot"
-          />
+                    <span
+                        className="connection-dot"
+                    />
 
                     {systemStatus?.status ===
                     "online"
@@ -125,9 +127,9 @@ function Dashboard() {
                     </div>
 
                     <div>
-            <span>
-              Temperatur
-            </span>
+                        <span>
+                            Temperatur
+                        </span>
 
                         <strong>
                             {systemStatus
@@ -136,7 +138,7 @@ function Dashboard() {
                         </strong>
 
                         <small>
-                            Sensor folgt
+                            Innenraum
                         </small>
                     </div>
                 </div>
@@ -147,9 +149,9 @@ function Dashboard() {
                     </div>
 
                     <div>
-            <span>
-              Luftfeuchtigkeit
-            </span>
+                        <span>
+                            Luftfeuchtigkeit
+                        </span>
 
                         <strong>
                             {systemStatus
@@ -158,7 +160,7 @@ function Dashboard() {
                         </strong>
 
                         <small>
-                            Sensor folgt
+                            Innenraum
                         </small>
                     </div>
                 </div>
@@ -169,9 +171,9 @@ function Dashboard() {
                     </div>
 
                     <div>
-            <span>
-              Wassertank
-            </span>
+                        <span>
+                            Wassertank
+                        </span>
 
                         <strong>
                             {systemStatus
@@ -180,7 +182,7 @@ function Dashboard() {
                         </strong>
 
                         <small>
-                            Sensor folgt
+                            Füllstand
                         </small>
                     </div>
                 </div>
@@ -191,16 +193,18 @@ function Dashboard() {
                     </div>
 
                     <div>
-            <span>
-              Beleuchtung
-            </span>
+                        <span>
+                            Beleuchtung
+                        </span>
 
                         <strong>
-                            AUS
+                            {systemStatus?.light
+                                ? "AN"
+                                : "AUS"}
                         </strong>
 
                         <small>
-                            Bald verfügbar
+                            Steuerung folgt
                         </small>
                     </div>
                 </div>
@@ -209,37 +213,36 @@ function Dashboard() {
             <div className="section-heading">
                 <div>
                     <h2>
-                        Deine Pflanzen
+                        Deine Beete
                     </h2>
 
                     <p>
-                        Live-Status der
-                        Bewässerung
+                        Feuchtigkeit und
+                        Bewässerung im Überblick
                     </p>
                 </div>
-
-                <ComingSoon />
             </div>
 
             <div className="plant-grid">
                 {loading && (
                     <p>
-                        Pflanzen werden geladen...
+                        Beete werden geladen...
                     </p>
                 )}
 
-                {plants.map((plant) => (
-                    <PlantCard
-                        key={plant.id}
-                        plant={plant}
-                        onWater={
-                            handleWater
-                        }
-                        onToggleAutomation={
-                            handleAutomation
-                        }
-                    />
-                ))}
+                {!loading &&
+                    beds.map((bed) => (
+                        <BedCard
+                            key={bed.id}
+                            bed={bed}
+                            onWater={
+                                handleWater
+                            }
+                            onToggleAutomation={
+                                handleAutomation
+                            }
+                        />
+                    ))}
             </div>
         </>
     );

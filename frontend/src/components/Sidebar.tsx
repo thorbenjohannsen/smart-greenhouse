@@ -31,6 +31,20 @@ function Sidebar() {
                     </NavLink>
 
                     <NavLink
+                        to="/beds"
+                        className={({ isActive }) =>
+                            `nav-item ${
+                                isActive
+                                    ? "active"
+                                    : ""
+                            }`
+                        }
+                    >
+                        <span>🌱</span>
+                        Beete
+                    </NavLink>
+
+                    <NavLink
                         to="/plants"
                         className={({ isActive }) =>
                             `nav-item ${
@@ -64,6 +78,18 @@ function Sidebar() {
                     >
                         <span>📷</span>
                         Kamera
+                    </NavLink>
+
+                    <NavLink
+                        to="/ai"
+                        className={({ isActive }) =>
+                            `nav-item ${
+                                isActive ? "active" : ""
+                            }`
+                        }
+                    >
+                        <span>✨</span>
+                        KI-Analyse
                     </NavLink>
 
                     <NavLink

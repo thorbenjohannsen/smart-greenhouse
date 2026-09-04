@@ -1,23 +1,15 @@
 import type {
-    Plant,
+    Bed,
     SystemStatus,
 } from "../types/greenhouse";
 
+
 const API_URL = "";
 
-export async function getPlants(): Promise<Plant[]> {
-    const response = await fetch(
-        `${API_URL}/api/plants`
-    );
 
-    if (!response.ok) {
-        throw new Error(
-            "Pflanzendaten konnten nicht geladen werden"
-        );
-    }
-
-    return response.json();
-}
+// ---------------------------------------------------------
+// SYSTEM
+// ---------------------------------------------------------
 
 export async function getSystemStatus(): Promise<SystemStatus> {
     const response = await fetch(
@@ -26,24 +18,107 @@ export async function getSystemStatus(): Promise<SystemStatus> {
 
     if (!response.ok) {
         throw new Error(
-            "Systemstatus konnte nicht geladen werden"
+            "Systemstatus konnte nicht geladen werden."
         );
     }
 
     return response.json();
 }
 
-export async function waterPlant(
-    plantId: number,
-    amount: number
-) {
+
+// ---------------------------------------------------------
+// BEETE
+// ---------------------------------------------------------
+
+export async function getBeds(): Promise<Bed[]> {
     const response = await fetch(
-        `${API_URL}/api/plants/${plantId}/water`,
+        `${API_URL}/api/beds`
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Beete konnten nicht geladen werden."
+        );
+    }
+
+    return response.json();
+}
+
+
+export async function getBed(
+    id: number
+): Promise<Bed> {
+
+    const response = await fetch(
+        `${API_URL}/api/beds/${id}`
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Beet konnte nicht geladen werden."
+        );
+    }
+
+    return response.json();
+}
+
+
+// ---------------------------------------------------------
+// BEET BEARBEITEN
+// ---------------------------------------------------------
+
+export async function updateBed(
+    id: number,
+    values: Partial<Bed>
+): Promise<Bed> {
+
+    const response = await fetch(
+        `${API_URL}/api/beds/${id}`,
+        {
+            method: "PATCH",
+
+            headers: {
+                "Content-Type":
+                    "application/json",
+            },
+
+            body: JSON.stringify(values),
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Beet konnte nicht aktualisiert werden."
+        );
+    }
+
+    return response.json();
+}
+
+
+// ---------------------------------------------------------
+// BEWÄSSERUNG
+// ---------------------------------------------------------
+
+export async function waterBed(
+    id: number,
+    amount: number
+): Promise<{
+    success: boolean;
+    bed: Bed;
+    amount: number;
+}> {
+
+    const response = await fetch(
+        `${API_URL}/api/beds/${id}/water`,
         {
             method: "POST",
+
             headers: {
-                "Content-Type": "application/json",
+                "Content-Type":
+                    "application/json",
             },
+
             body: JSON.stringify({
                 amount,
             }),
@@ -52,40 +127,38 @@ export async function waterPlant(
 
     if (!response.ok) {
         throw new Error(
-            "Bewässerung konnte nicht gestartet werden"
+            "Bewässerung konnte nicht gestartet werden."
         );
     }
 
     return response.json();
 }
 
-export async function setPlantAutomation(
-    plantId: number,
+
+// ---------------------------------------------------------
+// AUTOMATISCHE BEWÄSSERUNG
+// ---------------------------------------------------------
+
+export async function setBedAutomation(
+    id: number,
     enabled: boolean
-) {
-    const response = await fetch(
-        `${API_URL}/api/plants/${plantId}/automation`,
+): Promise<Bed> {
+
+    return updateBed(
+        id,
         {
-            method: "PATCH",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                enabled,
-            }),
+            autoWatering: enabled,
         }
     );
-
-    if (!response.ok) {
-        throw new Error(
-            "Automatik konnte nicht geändert werden"
-        );
-    }
-
-    return response.json();
 }
 
+
+// ---------------------------------------------------------
+// KAMERA
+// ---------------------------------------------------------
+
 export async function takeCameraSnapshot() {
+
     const response = await fetch(
         `${API_URL}/api/camera/snapshot`,
         {
@@ -95,13 +168,14 @@ export async function takeCameraSnapshot() {
 
     if (!response.ok) {
         throw new Error(
-            "Kameraaufnahme fehlgeschlagen"
+            "Kameraaufnahme fehlgeschlagen."
         );
     }
 
     return response.json();
 }
 
+
 export function getCameraSnapshotUrl() {
-    return `/api/camera/snapshot?t=${Date.now()}`;
+    return `${API_URL}/api/camera/snapshot?t=${Date.now()}`;
 }
