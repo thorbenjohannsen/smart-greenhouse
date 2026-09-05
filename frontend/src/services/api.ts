@@ -179,3 +179,54 @@ export async function takeCameraSnapshot() {
 export function getCameraSnapshotUrl() {
     return `${API_URL}/api/camera/snapshot?t=${Date.now()}`;
 }
+
+export async function turnFanOn(): Promise<{
+    success: boolean;
+    fan: boolean;
+}> {
+
+    const response = await fetch(
+        `${API_URL}/api/fan/on`,
+        {
+            method: "POST",
+        }
+    );
+
+
+    if (!response.ok) {
+
+        throw new Error(
+            "Lüfter konnte nicht eingeschaltet werden."
+        );
+
+    }
+
+
+    return response.json();
+}
+
+
+export async function turnFanOff(): Promise<{
+    success: boolean;
+    fan: boolean;
+}> {
+
+    const response = await fetch(
+        `${API_URL}/api/fan/off`,
+        {
+            method: "POST",
+        }
+    );
+
+
+    if (!response.ok) {
+
+        throw new Error(
+            "Lüfter konnte nicht ausgeschaltet werden."
+        );
+
+    }
+
+
+    return response.json();
+}

@@ -10,6 +10,11 @@ import {
     fileURLToPath
 } from "node:url";
 
+import {
+    fanOn,
+    fanOff,
+} from "./hardware/fan.js";
+
 
 const app = express();
 
@@ -17,6 +22,13 @@ const PORT = 3000;
 
 const IS_LINUX =
     process.platform === "linux";
+
+
+// ---------------------------------------------------------
+// RUNTIME STATE
+// ---------------------------------------------------------
+
+let fanEnabled = false;
 
 
 // ---------------------------------------------------------
@@ -118,7 +130,8 @@ app.get(
             waterTank: 74,
 
             light: false,
-            fan: false,
+
+            fan: fanEnabled,
 
             cameraAvailable: IS_LINUX,
         });
@@ -351,6 +364,156 @@ app.post(
 
 
 // ---------------------------------------------------------
+// FAN STATUS
+// ---------------------------------------------------------
+
+app.get(
+    "/api/fan/status",
+    (_req, res) => {
+
+        return res.json({
+            available:
+            IS_LINUX,
+
+            fan:
+            fanEnabled,
+
+            gpio:
+                IS_LINUX
+                    ? 18
+                    : null,
+        });
+    }
+);
+
+
+// ---------------------------------------------------------
+// FAN ON
+// ---------------------------------------------------------
+
+app.post(
+    "/api/fan/on",
+    async (_req, res) => {
+
+        if (!IS_LINUX) {
+
+            return res
+                .status(503)
+                .json({
+                    success: false,
+
+                    error:
+                        "Lüftersteuerung ist nur auf dem Raspberry Pi verfügbar.",
+                });
+        }
+
+
+        try {
+
+            await fanOn();
+
+
+            fanEnabled =
+                true;
+
+
+            console.log(
+                "🌬️ Lüfter eingeschaltet"
+            );
+
+
+            return res.json({
+                success: true,
+
+                fan:
+                    true,
+            });
+
+        } catch (error) {
+
+            console.error(
+                "Fan ON error:",
+                error
+            );
+
+
+            return res
+                .status(500)
+                .json({
+                    success: false,
+
+                    error:
+                        "Lüfter konnte nicht eingeschaltet werden.",
+                });
+        }
+    }
+);
+
+
+// ---------------------------------------------------------
+// FAN OFF
+// ---------------------------------------------------------
+
+app.post(
+    "/api/fan/off",
+    async (_req, res) => {
+
+        if (!IS_LINUX) {
+
+            return res
+                .status(503)
+                .json({
+                    success: false,
+
+                    error:
+                        "Lüftersteuerung ist nur auf dem Raspberry Pi verfügbar.",
+                });
+        }
+
+
+        try {
+
+            await fanOff();
+
+
+            fanEnabled =
+                false;
+
+
+            console.log(
+                "🌬️ Lüfter ausgeschaltet"
+            );
+
+
+            return res.json({
+                success: true,
+
+                fan:
+                    false,
+            });
+
+        } catch (error) {
+
+            console.error(
+                "Fan OFF error:",
+                error
+            );
+
+
+            return res
+                .status(500)
+                .json({
+                    success: false,
+
+                    error:
+                        "Lüfter konnte nicht ausgeschaltet werden.",
+                });
+        }
+    }
+);
+
+
+// ---------------------------------------------------------
 // CAMERA PATHS
 // ---------------------------------------------------------
 
@@ -572,7 +735,7 @@ app.get(
 
 app.listen(
     PORT,
-    () => {
+    async () => {
 
         console.log(
             `🌿 Greenhouse Backend läuft auf Port ${PORT}`
@@ -583,6 +746,47 @@ app.listen(
             `💻 Plattform: ${process.platform}`
         );
 
+
+        // -------------------------------------------------
+        // FAN INITIAL STATE
+        // -------------------------------------------------
+
+        if (IS_LINUX) {
+
+            try {
+
+                await fanOff();
+
+
+                fanEnabled =
+                    false;
+
+
+                console.log(
+                    "🌬️ Lüfter initial: AUS"
+                );
+
+            } catch (error) {
+
+                console.error(
+                    "Lüfter konnte beim Start nicht initialisiert werden:",
+                    error
+                );
+
+            }
+
+        } else {
+
+            console.log(
+                "🌬️ Lüftersteuerung lokal deaktiviert"
+            );
+
+        }
+
+
+        // -------------------------------------------------
+        // CAMERA MODE
+        // -------------------------------------------------
 
         console.log(
             IS_LINUX
